@@ -1,0 +1,27 @@
+# PoE Arbitrage Scanner 💎
+
+Scanner automático de arbitragem para Path of Exile utilizando a API do **poe.ninja**. O script busca oportunidades de lucro (flipping) em Currencies e Fragments a cada intervalo definido.
+
+## 📂 Estrutura do Projeto
+
+O projeto está organizado de forma modular para facilitar a manutenção:
+
+- `main.py`: Ponto de entrada e gerenciamento do loop de execução.
+- `config.json`: Arquivo de configuração (Liga, Filtros, Debug).
+- `core/api.py`: Comunicação com a API (Ref: [ayberkgezer/poe.ninja-API-Document](https://github.com/ayberkgezer/poe.ninja-API-Document)).
+- `core/analyzer.py`: Lógica de cálculo de profit e filtragem de dados.
+
+## ⚙️ Configuração
+
+Edite o arquivo `config.json` para ajustar os parâmetros:
+
+- `league`: Nome da liga atual (ex: "Standard", "Settlers").
+- `min_profit_percent`: Porcentagem mínima de lucro para disparar o alerta.
+- `intervalo_segundos`: Tempo entre cada varredura (recomendado: 900 para 15min).
+- `debug`: Se `true`, exibe todos os itens recebidos da API no console.
+
+## 🚀 Como Executar
+
+1. Instale as dependências:
+   ```bash
+   pip install -r requirements.txt
