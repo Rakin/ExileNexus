@@ -34,45 +34,56 @@ class PoeScannerApp:
                 all_ops = []
                 categories = ["Currency", "Fragment", "Scarab"]
                 
-                # Coleta todos os dados primeiro
+                # 1. COLETA DE DADOS (Loop silencioso)
                 for cat in categories:
                     data = api.get_data(cat)
                     if data and 'lines' in data:
-                        print(f"[LOG] Analisando {len(data['lines'])} itens em {cat}...")
+                        # Log discreto para sabermos o progresso
+                        print(f"[LOG] Coletando {len(data['lines'])} itens em {cat}...")
+                        
                         ops = ProfitAnalyzer.scan_currencies(
                             data, 
                             cfg['min_profit_percent'], 
                             cfg.get('min_profit_chaos', 10.0), 
                             cfg['debug'], 
                             divine_price,
-                            cat # O SEXTO ARGUMENTO: Nome da categoria
+                            cat
                         )
                         if ops:
                             all_ops.extend(ops)
 
-                # LIMPA A TELA E MOSTRA O RESULTADO ÚNICO
+                # 2. LIMPEZA E EXIBIÇÃO ÚNICA (Fora do loop das categorias)
                 os.system('cls' if os.name == 'nt' else 'clear')
                 print(f"--- POE SCANNER PRO ---")
                 print(f"Liga: {cfg['league']} | 1 Divine = {divine_price:.1f} Chaos\n")
                 
                 if all_ops:
-                    # Ordenação: Risco Baixo primeiro, depois maior lucro
+                    # Ordenação Inteligente
                     all_ops.sort(key=lambda x: (x['risk'] != 'BAIXO', -x['profit_chaos']))
                     
                     print(f"{'ITEM':<22} | {'CATEGORIA':<10} | {'LUCRO':<10} | {'TREND'}")
                     print("-" * 75)
                     
-                    for op in all_ops[:20]: # Top 20 oportunidades
+                    for op in all_ops[:20]:
                         lucro_str = self.format_currency(op['profit_chaos'], divine_price)
                         trend_arrow = "↑" if op['trend'] > 0 else "↓"
-                        
-                        # Ícone de destaque
                         icon = "💎" if op['profit_chaos'] > divine_price else ("  ")
                         if op['risk'] == "ALTO": icon = "⚠️"
 
                         print(f"{op['name']:22} | {op['category']:<10} | {lucro_str:<10} | {trend_arrow} {abs(op['trend']):>2.0f}% {icon}")
+                    
+                    # 3. RESUMO FINAL (Abaixo da tabela consolidada)
+                    total_itens = len(all_ops)
+                    joias = len([x for x in all_ops if x['profit_chaos'] > divine_price])
+                    
+                    print("-" * 75)
+                    print(f"📊 RESUMO FINAL DA VARREDURA:")
+                    print(f"   - Total de oportunidades: {total_itens}")
+                    print(f"   - Itens de alto lucro (💎): {joias}")
+                    if all_ops:
+                        print(f"   - Sniper Sugerido: {all_ops[0]['name']} ({all_ops[0]['category']})")
                 else:
-                    print("Nenhuma oportunidade encontrada com os filtros atuais.")
+                    print("\n[!] Nenhuma oportunidade lucrativa encontrada no momento.")
 
             except Exception as e:
                 print(f"⚠️ Erro na varredura: {e}")
