@@ -17,8 +17,8 @@ class ProfitAnalyzer:
             # O Ninja usa Sparklines vazias ou flags de alerta para itens suspeitos
             # Itens estáveis têm 'data' populado na sparkline
             is_low_confidence = (
-                pay_listings < 5 or 
-                rec_listings < 5 or 
+                pay_listings < 3 or 
+                rec_listings < 3 or 
                 item.get('lowConfidencePaySparkLine') is not None
             )
 

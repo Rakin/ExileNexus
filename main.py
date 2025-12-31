@@ -35,26 +35,35 @@ class PoeScannerApp:
             print(f"--- POE SCANNER PRO ---")
             print(f"Liga: {cfg['league']} | 1 Divine = {divine_price:.1f} Chaos\n")
             
-            # Buscando Currencies
-            data = api.get_currency_data("Currency")
-            ops = ProfitAnalyzer.scan_currencies(data, cfg['min_profit_percent'], cfg['debug'], divine_price)
+            all_ops = []
+            categories = ["Currency", "Fragment"]
+            
+            for cat in categories:
+                data = api.get_currency_data(cat)
+                # O bloco abaixo PRECISA estar indentado (4 espaços para a direita)
+                ops = ProfitAnalyzer.scan_currencies(data, cfg['min_profit_percent'], cfg['debug'], divine_price)
+                if ops:
+                    all_ops.extend(ops)
 
-            if ops:
+            if all_ops:
+                # Ordena as oportunidades pelo lucro bruto (Chaos)
+                all_ops.sort(key=lambda x: x['profit_chaos'], reverse=True)
+                
                 print(f"{'ITEM':<22} | {'PROFIT':<8} | {'TREND':<7} | {'LUCRO'}")
-                print("-" * 60)
-                for op in ops:
+                print("-" * 65)
+                for op in all_ops:
                     trend_arrow = "↑" if op['trend'] > 0 else "↓"
-                    # Chama a função interna para formatar o lucro
                     lucro_formatado = self.format_currency(op['profit_chaos'], divine_price)
                     
-                    risk_msg = "⚠️" if op['risk'] == "ALTO" else " "
+                    # Ícone de risco baseado na nova lógica anti-price fixing
+                    status_icon = "⚠️" if op['risk'] == "ALTO" else " "
                     
-                    print(f"{op['name']:22} | {op['profit_pct']:>6.2f}% | {trend_arrow} {abs(op['trend']):>4}% | {lucro_formatado} {risk_msg}")
+                    print(f"{op['name']:22} | {op['profit_pct']:>6.2f}% | {trend_arrow} {abs(op['trend']):>4.0f}% | {lucro_formatado} {status_icon}")
                     
                     if op['profit_pct'] >= 5:
                         winsound.Beep(1000, 200)
             else:
-                print("Buscando oportunidades lucrativas...")
+                print("Buscando oportunidades lucrativas (Currency & Fragment)...")
 
             print(f"\nPróxima varredura em {cfg['intervalo_segundos']}s...")
             time.sleep(cfg['intervalo_segundos'])
