@@ -6,54 +6,58 @@ class ProfitAnalyzer:
             return results
 
         for item in data['lines']:
-            name = item.get('currencyTypeName') or item.get('name') # Suporte para Scarabs/Items
+            # Extração dinâmica de nomes (Documentação oficial poe.ninja)
+            name = item.get('currencyTypeName') or item.get('name')
             
             pay_data = item.get('pay', {})
             rec_data = item.get('receive', {})
             
+            # Dados de liquidez (Listings)
             pay_listings = pay_data.get('listing_count', 0)
             rec_listings = rec_data.get('listing_count', 0)
             
-            # Para Scarabs, usamos chaosValue se o receive['value'] não existir
+            # Determinação do Valor de Venda (Receive) e Compra (Pay)
+            # Priorizamos o valor de mercado (pay/receive), fallback para chaosValue (Scarabs/Items)
             receive_val = rec_data.get('value') or item.get('chaosValue')
-            pay_val = pay_data.get('value')
+            pay_val = pay_data.get('value') or item.get('chaosValue')
 
-            # Filtro de Confiança: Pelo menos 2 listagens (ou ignorar se for Scarab que não tem contagem clara)
-            is_low_confidence = (pay_listings < 2 and rec_listings < 2) if pay_val else False
+            if not receive_val or not pay_val:
+                continue
 
-            if receive_val:
-                # Se for Moeda/Fragmento (tem pay_val), calcula custo real. 
-                # Se for Scarab, o custo de compra é o próprio chaosValue do Ninja.
-                if pay_val:
-                    real_buy_cost = 1 / pay_val if pay_val < 1.0 else pay_val
-                else:
-                    real_buy_cost = receive_val # Arbitragem de Scarab exige dados externos, mantemos paridade aqui
+            # Filtro de Confiança: Evitar itens "fantasmas" com poucas listagens
+            is_low_confidence = (pay_listings < 2 or rec_listings < 2) if category_name != "Scarab" else False
 
-                profit_chaos = receive_val - real_buy_cost
-                profit_pct = (profit_chaos / real_buy_cost) * 100 if real_buy_cost > 0 else 0
-                
-                trend_data = item.get('receiveSparkLine', {}).get('totalChange', 0)
+            # Cálculo de Lucro Real (Arbitragem: Venda - Compra)
+            profit_chaos = receive_val - pay_val
+            profit_pct = (profit_chaos / pay_val) * 100 if pay_val > 0 else 0
+            
+            # Sparkline: Tendência de preço nos últimos 7 dias
+            trend_data = item.get('receiveSparkLine', {}).get('totalChange', 0)
 
-                # Nível de Risco
-                if is_low_confidence:
-                    risk_level = "CRÍTICO"
-                elif trend_data < 0 and abs(trend_data) > profit_pct:
-                    risk_level = "ALTO"
-                else:
-                    risk_level = "BAIXO"
+            # Classificação de Risco baseada em Tendência e Confiança
+            if is_low_confidence:
+                risk_level = "CRÍTICO"
+            elif trend_data < -10: # Queda de mais de 10% no preço de mercado
+                risk_level = "ALTO"
+            else:
+                risk_level = "BAIXO"
 
-                # --- DEFINIÇÃO DA VARIÁVEL QUE FALTOU ---
-                passou_filtro_valor = (profit_pct >= min_p or profit_chaos >= min_c)
+            # Filtros de Profit (Definidos no config.json)
+            # Aceitamos o item se ele passar em lucro percentual OU lucro absoluto
+            passou_filtro_valor = (profit_pct >= min_p or profit_chaos >= min_c)
 
-                if passou_filtro_valor and not is_low_confidence:
-                    results.append({
-                        'name': name,
-                        'category': category_name,
-                        'profit_pct': profit_pct,
-                        'profit_chaos': profit_chaos,
-                        'trend': trend_data,
-                        'risk': risk_level,
-                        'listings': rec_listings
-                    })
+            if passou_filtro_valor:
+                # Na Dashboard, queremos ver até os de risco alto, mas marcados corretamente
+                results.append({
+                    'name': name,
+                    'category': category_name,
+                    'profit_pct': round(profit_pct, 2),
+                    'profit_chaos': round(profit_chaos, 2),
+                    'trend': trend_data,
+                    'risk': risk_level,
+                    'listings': rec_listings,
+                    'buy_price': pay_val,
+                    'sell_price': receive_val
+                })
                     
         return results
