@@ -1,41 +1,37 @@
 class ProfitAnalyzer:
     @staticmethod
-    def scan_currencies(data, min_p, min_c, debug, divine_price):
-        """
-        Analisa oportunidades de lucro em moedas e fragmentos.
-        Lógica: (Lucro % >= min_p) OU (Lucro Chaos >= min_c)
-        """
+    def scan_currencies(data, min_p, min_c, debug, divine_price, category_name):
         results = []
         if not data or 'lines' not in data:
             return results
 
         for item in data['lines']:
-            name = item.get('currencyTypeName')
+            name = item.get('currencyTypeName') or item.get('name') # Suporte para Scarabs/Items
             
-            # --- Dados de Mercado ---
             pay_data = item.get('pay', {})
             rec_data = item.get('receive', {})
             
-            # Volume de Listagens
             pay_listings = pay_data.get('listing_count', 0)
             rec_listings = rec_data.get('listing_count', 0)
             
-            receive_val = rec_data.get('value')
+            # Para Scarabs, usamos chaosValue se o receive['value'] não existir
+            receive_val = rec_data.get('value') or item.get('chaosValue')
             pay_val = pay_data.get('value')
 
-            # Filtro de Confiança
-            is_low_confidence = (
-                pay_listings == 0 and rec_listings == 0 # Só bloqueia se não houver NENHUM dado
-            )
+            # Filtro de Confiança: Pelo menos 2 listagens (ou ignorar se for Scarab que não tem contagem clara)
+            is_low_confidence = (pay_listings < 2 and rec_listings < 2) if pay_val else False
 
-            if pay_val and receive_val:
-                # Normalização do custo de compra
-                real_buy_cost = 1 / pay_val if pay_val < 1.0 else pay_val
-                
+            if receive_val:
+                # Se for Moeda/Fragmento (tem pay_val), calcula custo real. 
+                # Se for Scarab, o custo de compra é o próprio chaosValue do Ninja.
+                if pay_val:
+                    real_buy_cost = 1 / pay_val if pay_val < 1.0 else pay_val
+                else:
+                    real_buy_cost = receive_val # Arbitragem de Scarab exige dados externos, mantemos paridade aqui
+
                 profit_chaos = receive_val - real_buy_cost
-                profit_pct = (profit_chaos / real_buy_cost) * 100
+                profit_pct = (profit_chaos / real_buy_cost) * 100 if real_buy_cost > 0 else 0
                 
-                # Tendência de preço
                 trend_data = item.get('receiveSparkLine', {}).get('totalChange', 0)
 
                 # Nível de Risco
@@ -46,18 +42,13 @@ class ProfitAnalyzer:
                 else:
                     risk_level = "BAIXO"
 
-                if debug:
-                    print(f"[DEBUG] {name:20} | Buy: {real_buy_cost:.1f} | Sell: {receive_val:.1f}")
-
-                # --- Lógica de Filtro (PERCENTUAL OU CHAOS FIXO) ---
+                # --- DEFINIÇÃO DA VARIÁVEL QUE FALTOU ---
                 passou_filtro_valor = (profit_pct >= min_p or profit_chaos >= min_c)
-                
-                # O bloco abaixo deve estar indentado com 4 espaços extras
+
                 if passou_filtro_valor and not is_low_confidence:
                     results.append({
                         'name': name,
-                        'buy': real_buy_cost,
-                        'sell': receive_val,
+                        'category': category_name,
                         'profit_pct': profit_pct,
                         'profit_chaos': profit_chaos,
                         'trend': trend_data,
