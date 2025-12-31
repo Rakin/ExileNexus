@@ -36,14 +36,21 @@ class PoeScannerApp:
             print(f"Liga: {cfg['league']} | 1 Divine = {divine_price:.1f} Chaos\n")
             
             all_ops = []
-            categories = ["Currency", "Fragment"]
+            categories = ["Currency", "Fragment", "Scarab"]
             
             for cat in categories:
                 data = api.get_currency_data(cat)
-                # O bloco abaixo PRECISA estar indentado (4 espaços para a direita)
-                ops = ProfitAnalyzer.scan_currencies(data, cfg['min_profit_percent'], cfg['debug'], divine_price)
-                if ops:
-                    all_ops.extend(ops)
+                if data and 'lines' in data:
+                    print(f"[LOG] Analisando {len(data['lines'])} itens em {cat}...") # Adicione esta linha
+                    ops = ProfitAnalyzer.scan_currencies(
+                        data, 
+                        cfg['min_profit_percent'], 
+                        cfg.get('min_profit_chaos', 10.0), # Este é o argumento que faltava!
+                        cfg['debug'], 
+                        divine_price
+                    )
+                    if ops:
+                        all_ops.extend(ops)
 
             if all_ops:
                 # Ordena as oportunidades pelo lucro bruto (Chaos)

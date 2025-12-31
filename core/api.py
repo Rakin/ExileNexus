@@ -28,14 +28,17 @@ class PoeNinjaAPI:
             return None
 
     def get_divine_price(self):
-        """
-        Utiliza a função get_currency_data para extrair 
-        o valor atual do Divine em Chaos.
-        """
+        """Busca o preço do Divine ou levanta erro se a API falhar"""
         data = self.get_currency_data("Currency")
-        if data and 'lines' in data:
-            for item in data['lines']:
-                if item.get('currencyTypeName') == 'Divine Orb':
-                    # Retorna o valor de venda (receive) do Divine
-                    return item.get('receive', {}).get('value', 194)
-        return 194 # Fallback caso a API falhe
+        
+        if not data or 'lines' not in data:
+            raise ConnectionError("Falha crítica: Não foi possível obter dados da API poe.ninja.")
+
+        for item in data['lines']:
+            if item.get('currencyTypeName') == 'Divine Orb':
+                price = item.get('receive', {}).get('value')
+                if price:
+                    return price
+        
+        # Se percorreu tudo e não achou o Divine Orb (raro, mas possível em erro de liga)
+        raise ValueError("Falha crítica: Divine Orb não encontrado nos dados da liga atual.")

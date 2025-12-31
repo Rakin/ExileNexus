@@ -1,6 +1,6 @@
 {
-    "league": "Keppers",
-    "min_profit_percent": 1,
-    "intervalo_segundos": 3600,
-    "debug": true
+    "league": "Keepers",
+    "min_profit_percent": 0.3,
+    "intervalo_segundos": 20,
+    "debug": false
 }
