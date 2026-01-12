@@ -1,29 +1,32 @@
-from services.poe_ninja_api import PoeNinjaClient
-from services.cache_manager import PriceCache
+from src.services.poe_ninja_api import PoeNinjaClient
+from src.services.cache_manager import PriceCache
 
 class ItemScanner:
     """
-    Orquestra o scan de itens integrando a API e o Cache.
+    Lógica principal do scanner aplicando SOLID e Clean Code.
     """
-    def __init__(self, api_client: PoeNinjaClient, cache: PriceCache):
-        self.api = api_client
+    def __init__(self, api: PoeNinjaClient, cache: PriceCache):
+        self.api = api
         self.cache = cache
 
-    def get_item_price(self, item_name: str, category: str) -> float:
-        # Guard Clause: Verifica cache primeiro
-        if self.cache.is_valid(category):
-            return self._find_in_data(self.cache.get(category), item_name)
+    def fetch_item_value(self, item_name: str, category: str = "itemoverview") -> float:
+        """
+        Retorna o valor em Chaos de um item específico.
+        """
+        # Guard Clause: Se estiver no cache, retorna imediatamente
+        cached_data = self.cache.get(category)
+        if cached_data:
+            return self._extract_price(cached_data, item_name)
 
-        # Busca novos dados se o cache expirou
-        data = self.api.fetch_data(category)
-        self.cache.update(category, data)
+        # Se não, busca na API e atualiza cache
+        data = self.api.get_prices(category)
+        self.cache.set(category, data)
         
-        return self._find_in_data(data, item_name)
+        return self._extract_price(data, item_name)
 
-    def _find_in_data(self, data: Dict, item_name: str) -> float:
-        # Lógica de busca otimizada
-        for item in data.get('lines', []):
-            if item.get('name') == item_name:
-                return item.get('chaosValue', 0.0)
+    def _extract_price(self, data: dict, item_name: str) -> float:
+        """Procura o item na lista de resultados."""
+        for item in data.get("lines", []):
+            if item.get("name") == item_name:
+                return float(item.get("chaosValue", 0.0))
         return 0.0
-    # ... (todo o código da classe ItemScanner aqui)
