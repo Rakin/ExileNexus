@@ -1,0 +1,9 @@
+﻿{
+    "QuestReward": {
+        "Templar": {
+            "1": ["Smite", "Glacial Hammer", "Magma Strike"],
+            "4": ["Holy Flame Totem", "Steelskin", "Frostblink"],
+            "8": ["Added Lightning Damage", "Melee Splash", "Ancestral Protector"]
+        }
+    }
+}
